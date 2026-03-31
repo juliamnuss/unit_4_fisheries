@@ -268,3 +268,28 @@ summary(model_qp)
 # model_qp2 = glm(yrs_collapsed ~ ratio_yrs_overfished + FisheryType, offset(log(yrs_data)), data = collapse_summary_zero_trunc, family = "quasipoisson")
 # summary(model_qp2)
 
+####################################################################
+# 03.31.2026
+# JMN
+# Poisson Continued. . .
+median_ratio_yrs_low_stock = median(collapse_summary_zero_trunc$ratio_yrs_low_stock)
+newdata = expand.grid(FisheryType = unique(collapse_summary_zero_trunc$FisheryType),
+                      ratio_yrs_overfished = seq(from=0,to=1,by=0.1), 
+                      ratio_yrs_low_stock = median_ratio_yrs_low_stock)
+
+#newdata = data.frame(ratio_yrs_low_stock = seq(from=0,to=1,by=0.1),
+#                     ratio_yrs_overfished = median(collapse_summary_zero_trunc$ratio_yrs_overfished))
+model_qp_predict = predict(model_qp, type="response", newdata = newdata, se.fit=TRUE)
+
+# Organize predictions into a tidy table
+collapse_time_predictions = cbind(newdata, model_qp_predict)
+
+# plot predictiona and SE ribbon
+ggplot() + 
+  geom_line(aes(x = ratio_yrs_overfished, y = fit, color = FisheryType), data = collapse_time_predictions) + 
+  geom_ribbon(aes(x = ratio_yrs_overfished, ymin = fit - se.fit, ymax = fit + se.fit, fill = FisheryType), alpha = 0.5, data = collapse_time_predictions) + 
+  geom_point(aes(x = ratio_yrs_overfished, y = yrs_collapsed), data = collapse_summary_zero_trunc) + 
+  annotate("text", x = 0.3, y = 50, label = paste0("ratio low stock yrs = ", round(median_ratio_yrs_low_stock))) + 
+  ylab("# years stock was collapsed") + 
+  # facet_wrap(~FisheryType) + 
+  theme_bw()
